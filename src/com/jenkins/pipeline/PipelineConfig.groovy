@@ -28,8 +28,8 @@ class PipelineConfig implements Serializable {
         def config = new PipelineConfig(
             name: pipeline.name ?: 'Default Pipeline',
             agent: pipeline.agent ?: 'any',
-            environment: pipeline.environment ?: [:],
-            tools: pipeline.tools ?: [:]
+            environment: pipeline.environment ? new HashMap<>(pipeline.environment) : [:],
+            tools: pipeline.tools ? new HashMap<>(pipeline.tools) : [:]
         )
 
         // 解析 stages

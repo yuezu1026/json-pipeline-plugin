@@ -19,7 +19,7 @@ class StageConfig implements Serializable {
         def config = new StageConfig(
             name: json.name ?: 'Unnamed Stage',
             agent: json.agent,
-            environment: json.environment ?: [:],
+            environment: json.environment ? new HashMap<>(json.environment) : [:],
             tools: json.tools ?: []
         )
 

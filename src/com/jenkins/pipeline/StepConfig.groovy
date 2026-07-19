@@ -15,6 +15,32 @@ class StepConfig implements Serializable {
     Map<String, Object> params = [:]     // step 参数
     List<StepConfig> children = []       // 嵌套 steps（如 dir, timeout, retry 等）
 
+    /**
+     * 深度转换 LazyMap → HashMap，确保所有嵌套 Map 都可序列化
+     */
+    private static Map<String, Object> deepCopyMap(Map map) {
+        if (map == null) return [:]
+        Map<String, Object> result = new HashMap<>()
+        map.each { key, value ->
+            result[key] = deepCopyValue(value)
+        }
+        return result
+    }
+
+    private static List deepCopyList(List list) {
+        if (list == null) return []
+        return list.collect { deepCopyValue(it) }
+    }
+
+    private static Object deepCopyValue(Object value) {
+        if (value instanceof Map) {
+            return deepCopyMap((Map) value)
+        } else if (value instanceof List) {
+            return deepCopyList((List) value)
+        }
+        return value
+    }
+
     static StepConfig fromJson(Map json) {
         def step = new StepConfig()
         step.type = json.type ?: json.remove('type')
@@ -27,8 +53,8 @@ class StepConfig implements Serializable {
             json.remove('steps')
         }
 
-        // 剩余字段作为 params
-        step.params = new HashMap<>(json)
+        // 剩余字段作为 params —— 深拷贝确保可序列化
+        step.params = deepCopyMap(json)
         return step
     }
 }

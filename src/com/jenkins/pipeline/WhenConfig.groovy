@@ -31,7 +31,7 @@ class WhenConfig implements Serializable {
             beforeOptions: json.beforeOptions,
             allOf: json.allOf?.collect { WhenConfig.fromJson(it) } ?: [],
             anyOf: json.anyOf?.collect { WhenConfig.fromJson(it) } ?: [],
-            equals: json.equals ?: [:]
+            equals: json.equals ? new HashMap<>(json.equals) : [:],
         )
     }
 }
