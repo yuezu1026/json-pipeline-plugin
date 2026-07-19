@@ -1,0 +1,7 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:l="/lib/layout">
+  <l:tasks>
+    <l:task href="." icon="icon-up" title="${%Back to Dashboard}" contextMenu="false" />
+    <l:task href="configure" icon="icon-gear2" title="${%Configure}" contextMenu="false" />
+  </l:tasks>
+</j:jelly>

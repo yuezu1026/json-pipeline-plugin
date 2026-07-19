@@ -1,0 +1,31 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+    <f:section title="JSON Pipeline 配置">
+
+        <f:entry title="待构建的代码路径" field="sourceCodePath"
+                 description="待部署工程的 GitHub 仓库地址，如 https://github.com/myorg/my-project.git">
+            <f:textbox default="https://github.com/" />
+        </f:entry>
+
+        <f:entry title="配置仓库 URL" field="configRepoUrl"
+                 description="存放 JSON 配置文件的 Git 仓库地址">
+            <f:textbox clazz="required" default="https://github.com/myorg/pipeline-config.git" />
+        </f:entry>
+
+        <f:entry title="JSON 文件路径" field="configPath"
+                 description="JSON 配置文件在仓库中的路径，如 prod/deploy.json">
+            <f:textbox clazz="required" default="prod/deploy.json" />
+        </f:entry>
+
+        <f:entry title="分支" field="configBranch"
+                 description="Git 分支名，默认为 main">
+            <f:textbox default="main" />
+        </f:entry>
+
+        <f:entry title="Git 凭证" field="credentialsId"
+                 description="如仓库为私有，选择对应的 Git 凭证（可选）">
+            <c:select />
+        </f:entry>
+
+    </f:section>
+</j:jelly>

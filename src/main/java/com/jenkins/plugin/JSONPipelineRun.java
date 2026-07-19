@@ -1,11 +1,13 @@
 package com.jenkins.plugin;
 
 import hudson.model.BuildListener;
+import hudson.model.Queue;
+import hudson.model.Result;
 import hudson.model.Run;
 import java.io.File;
 import java.io.IOException;
 
-public class JSONPipelineRun extends Run<JSONPipelineJob, JSONPipelineRun> {
+public class JSONPipelineRun extends Run<JSONPipelineJob, JSONPipelineRun> implements Queue.Executable {
 
     public JSONPipelineRun(JSONPipelineJob job) throws IOException {
         super(job);
@@ -15,12 +17,10 @@ public class JSONPipelineRun extends Run<JSONPipelineJob, JSONPipelineRun> {
         super(job, buildDir);
     }
 
-    @Override
     public void run() {
-        // 调用父类的 execute() 来正确初始化构建生命周期
         execute(new RunExecution() {
             @Override
-            public void run(BuildListener listener) throws Exception {
+            public Result run(BuildListener listener) throws Exception {
                 listener.getLogger().println("JSON Pipeline Build Started");
 
                 JSONPipelineJob job = getParent();
@@ -30,11 +30,17 @@ public class JSONPipelineRun extends Run<JSONPipelineJob, JSONPipelineRun> {
                     listener.getLogger().println(script);
                 }
                 listener.getLogger().println("Build completed successfully.");
+                return Result.SUCCESS;
+            }
+
+            @Override
+            public void post(BuildListener listener) {
+                // 构建后处理
             }
 
             @Override
             public void cleanUp(BuildListener listener) {
-                // 清理资源（当前无需额外清理）
+                // 清理
             }
         });
     }

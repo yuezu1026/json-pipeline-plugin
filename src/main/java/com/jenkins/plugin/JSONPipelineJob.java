@@ -7,6 +7,7 @@ import hudson.model.Descriptor;
 import hudson.model.ItemGroup;
 import hudson.model.Items;
 import hudson.model.Job;
+import hudson.model.Queue;
 import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
 import hudson.util.FormValidation;
@@ -25,16 +26,17 @@ import java.util.logging.Logger;
  * JSON Pipeline Job —— 自定义 Jenkins Job 类型。
  *
  * 用户创建 Job 时只需填写:
- *   1. configRepoUrl  — Git 仓库 URL (存放 JSON 配置)
- *   2. configPath     — JSON 文件在仓库中的路径
- *   3. configBranch   — 分支 (默认 main)
- *   4. credentialsId  — Git 凭证 (可选)
+ *   1. sourceCodePath — 待构建工程的 GitHub 仓库地址
+ *   2. configRepoUrl  — Git 仓库 URL (存放 JSON 配置)
+ *   3. configPath     — JSON 文件在仓库中的路径
+ *   4. configBranch   — 分支 (默认 main)
+ *   5. credentialsId  — Git 凭证 (可选)
  *
  * Job 保存后自动生成 Pipeline 脚本:
  *   @Library('jenkins-json-pipeline') _
  *   jsonPipeline { configRepo = '...'; configPath = '...' }
  */
-public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> implements TopLevelItem {
+public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> implements TopLevelItem, Queue.Task {
 
     private static final Logger LOGGER = Logger.getLogger(JSONPipelineJob.class.getName());
 
@@ -138,17 +140,20 @@ public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> imple
     // ============================================================
 
     /**
+     * Queue.Task 接口 —— 创建可执行体
+     */
+    @Override
+    public Queue.Executable createExecutable() throws IOException {
+        return new JSONPipelineRun(this);
+    }
+
+    /**
      * 响应 "立即构建" 请求。
      */
     public void doBuild(StaplerRequest2 req, StaplerResponse2 rsp,
             @QueryParameter int delay) throws IOException, ServletException {
-        scheduleBuild(delay);
+        Jenkins.get().getQueue().schedule(this, delay);
         rsp.sendRedirect2(req.getContextPath() + "/");
-    }
-
-    @Override
-    protected JSONPipelineRun newBuild() throws IOException {
-        return new JSONPipelineRun(this);
     }
 
     @Override
