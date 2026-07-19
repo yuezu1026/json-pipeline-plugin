@@ -19,8 +19,9 @@ class JsonPipelineBuilder implements Serializable {
      * 根据 PipelineConfig 构建并运行完整 pipeline
      */
     void build(PipelineConfig config) {
-        // 配置 pipeline 级别的 agent
-        pipelineScript.node(config.agent ?: 'any') {
+        // config.agent 归一化：'any'/null/'' 都表示任意可用节点
+        def agentLabel = (config.agent == null || config.agent == 'any') ? '' : config.agent
+        pipelineScript.node(agentLabel) {
             // 设置环境变量
             if (config.environment) {
                 config.environment.each { k, v ->
@@ -63,10 +64,10 @@ class JsonPipelineBuilder implements Serializable {
             return
         }
 
-        // 确定 agent（stage 级别可覆盖）
-        def agent = stageConfig.agent ?: pipelineConfig.agent ?: 'any'
+        // 确定 agent（stage 级别可覆盖），'any'/'' 归一化为任意可用节点
+        def agentLabel = (stageConfig.agent == null || stageConfig.agent == 'any') ? '' : stageConfig.agent
 
-        pipelineScript.node(agent) {
+        pipelineScript.node(agentLabel) {
             def stageName = stageConfig.name ?: 'Unnamed Stage'
             pipelineScript.stage(stageName) {
 
