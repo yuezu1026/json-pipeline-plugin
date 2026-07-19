@@ -1,0 +1,45 @@
+{
+  "pipeline": {
+    "name": "生产环境部署",
+    "schema": [
+      {
+        "name": "BRANCH",
+        "type": "string",
+        "label": "分支",
+        "required": true,
+        "defaultValue": "main"
+      },
+      {
+        "name": "VERSION",
+        "type": "string",
+        "label": "版本号",
+        "required": true,
+        "defaultValue": "1.0.0"
+      },
+      {
+        "name": "DRY_RUN",
+        "type": "boolean",
+        "label": "仅预览",
+        "required": false,
+        "defaultValue": false
+      }
+    ],
+    "stages": [
+      {
+        "name": "构建",
+        "steps": [
+          {
+            "type": "echo",
+            "params": { "message": "构建 ${params.VERSION}..." }
+          }
+        ]
+      },
+      {
+        "name": "部署",
+        "steps": [
+          { "type": "echo", "params": { "message": "部署到生产环境..." } }
+        ]
+      }
+    ]
+  }
+}

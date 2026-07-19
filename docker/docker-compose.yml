@@ -1,0 +1,85 @@
+# ============================================================
+# Jenkins JSON Pipeline - 本地开发环境
+#
+# 启动:  docker compose up -d
+# 停止:  docker compose down
+# 查看:  http://localhost:8085
+# ============================================================
+
+services:
+  # ==========================================================
+  # PostgreSQL 16 数据库
+  # ==========================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: jenkins-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jenkins
+      POSTGRES_USER: jenkins
+      POSTGRES_PASSWORD: jenkins123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    # 不暴露端口，仅容器内访问
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - jenkins-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jenkins -d jenkins"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ==========================================================
+  # Jenkins 控制器 (jenkins/jenkins:latest)
+  # ==========================================================
+  jenkins:
+    image: jenkins/jenkins:latest
+    container_name: jenkins-controller
+    restart: unless-stopped
+    privileged: true
+    user: root
+    environment:
+      JAVA_OPTS: >
+        -Djava.awt.headless=true
+        -Xmx2048m
+        -Xms512m
+        -Djenkins.install.runSetupWizard=false
+        -Dhudson.model.DirectoryBrowserSupport.CSP=""
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: jenkins
+      POSTGRES_USER: jenkins
+      POSTGRES_PASSWORD: jenkins123
+    ports:
+      - "8085:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jenkins-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+# ============================================================
+# 持久化卷
+# ============================================================
+volumes:
+  jenkins_home:
+    name: jenkins_home
+  postgres_data:
+    name: jenkins_postgres_data
+
+networks:
+  jenkins-net:
+    name: jenkins-net
+    driver: bridge

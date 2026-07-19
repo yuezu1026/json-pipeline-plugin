@@ -1,0 +1,43 @@
+{
+  "pipeline": {
+    "name": "简单示例 - Hello World",
+    "agent": "any",
+    "schema": [
+      {
+        "name": "NAME",
+        "type": "string",
+        "label": "姓名",
+        "required": true,
+        "defaultValue": "World"
+      }
+    ],
+    "stages": [
+      {
+        "name": "Greeting",
+        "steps": [
+          {
+            "type": "echo",
+            "params": { "message": "Hello ${params.NAME} from JSON Pipeline!" }
+          }
+        ]
+      },
+      {
+        "name": "并行任务",
+        "parallel": [
+          {
+            "name": "任务A",
+            "steps": [
+              { "type": "echo", "params": { "message": "并行执行任务 A" } }
+            ]
+          },
+          {
+            "name": "任务B",
+            "steps": [
+              { "type": "echo", "params": { "message": "并行执行任务 B" } }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
