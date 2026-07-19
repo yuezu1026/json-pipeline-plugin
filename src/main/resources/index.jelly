@@ -1,0 +1,4 @@
+<?jelly escape-by-default='true'?>
+<div>
+  JSON Pipeline Plugin: 通过 JSON 配置文件定义 Jenkins 流水线。
+</div>
