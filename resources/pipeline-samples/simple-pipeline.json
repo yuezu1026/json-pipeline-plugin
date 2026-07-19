@@ -1,0 +1,31 @@
+{
+  "pipeline": {
+    "name": "简单示例 - Hello World",
+    "agent": "any",
+    "stages": [
+      {
+        "name": "Greeting",
+        "steps": [
+          { "type": "echo", "message": "Hello from JSON Pipeline!" },
+          {
+            "type": "sh",
+            "command": "echo 'Current time:' && date"
+          }
+        ]
+      },
+      {
+        "name": "并行任务",
+        "parallel": [
+          {
+            "name": "任务A",
+            "steps": [{ "type": "echo", "message": "并行执行任务 A" }]
+          },
+          {
+            "name": "任务B",
+            "steps": [{ "type": "echo", "message": "并行执行任务 B" }]
+          }
+        ]
+      }
+    ]
+  }
+}
