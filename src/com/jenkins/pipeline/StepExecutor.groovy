@@ -37,7 +37,23 @@ class StepExecutor implements Serializable {
                 break
 
             case 'checkout':
-                stepCtx.checkout(stepCtx.scm)
+                if (step.params.url) {
+                    // 检出外部 Git 仓库（如 Java 项目的 GIT_REPO 参数）
+                    def checkoutMap = [
+                        $class: 'GitSCM',
+                        branches: [[name: step.params.branch ?: 'main']],
+                        userRemoteConfigs: [[url: step.params.url]]
+                    ]
+                    if (step.params.credentialsId) {
+                        checkoutMap.userRemoteConfigs[0].credentialsId = step.params.credentialsId
+                    }
+                    stepCtx.checkout(checkoutMap)
+                } else if (step.params.branch && stepCtx.scm) {
+                    // 使用当前 SCM 但切换到指定分支
+                    stepCtx.checkout(stepCtx.scm)
+                } else {
+                    stepCtx.checkout(stepCtx.scm)
+                }
                 break
 
             case 'dir':
@@ -130,6 +146,12 @@ class StepExecutor implements Serializable {
 
             case 'withCredentials':
                 def bindings = []
+                // 支持简单写法: credentialsId → 自动生成 string binding
+                if (step.params.credentialsId) {
+                    def varName = step.params.variable ?: step.params.usernameVariable ?: 'CRED'
+                    bindings << stepCtx.string(credentialsId: step.params.credentialsId, variable: varName)
+                }
+                // 支持标准 bindings 数组写法
                 step.params.bindings?.each { binding ->
                     def b = []
                     binding.each { k, v -> b << "${k}(${v})" }

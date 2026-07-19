@@ -39,6 +39,11 @@ class JsonPipelineBuilder implements Serializable {
                 config.stages.each { stageConfig ->
                     executeStage(stageConfig, config)
                 }
+
+                // 所有 stage 成功 → 执行 post.success
+                if (config.post) {
+                    StepExecutor.executePost(pipelineScript, config.post, 'success')
+                }
             } catch (e) {
                 // 如果配置了 post/failure，执行失败后处理
                 if (config.post) {
@@ -85,6 +90,11 @@ class JsonPipelineBuilder implements Serializable {
                     // 执行 steps
                     stageConfig.steps?.each { step ->
                         StepExecutor.execute(pipelineScript, step)
+                    }
+
+                    // stage 成功 → 执行 stage.post.success
+                    if (stageConfig.post) {
+                        StepExecutor.executePost(pipelineScript, stageConfig.post, 'success')
                     }
 
                 } catch (e) {
