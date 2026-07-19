@@ -1,6 +1,11 @@
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
     <f:section title="JSON Pipeline 配置">
+
+        <f:entry title="待构建的代码路径" field="sourceCodePath"
+                 description="源代码在工作空间中的相对路径，如 src/">
+            <f:textbox default="." />
+        </f:entry>
 
         <f:entry title="配置仓库 URL" field="configRepoUrl"
                  description="存放 JSON 配置文件的 Git 仓库地址">
@@ -19,13 +24,8 @@
 
         <f:entry title="Git 凭证" field="credentialsId"
                  description="如仓库为私有，选择对应的 Git 凭证（可选）">
-            <f:select />
+            <c:select />
         </f:entry>
 
     </f:section>
-
-    <!-- Pipeline 定义由系统自动生成，用户不可见/不可编辑 -->
-    <f:invisibleEntry>
-        <f:readOnlyTextbox field="definition" />
-    </f:invisibleEntry>
 </j:jelly>

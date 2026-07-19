@@ -35,6 +35,7 @@ public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> imple
 
     private static final Logger LOGGER = Logger.getLogger(JSONPipelineJob.class.getName());
 
+    private String sourceCodePath = "";
     private String configRepoUrl = "";
     private String configPath = "";
     private String configBranch = "main";
@@ -51,10 +52,14 @@ public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> imple
         return (DescriptorImpl) Jenkins.get().getDescriptorOrDie(getClass());
     }
 
-    public String getConfigRepoUrl() { return configRepoUrl; }
-    public String getConfigPath()    { return configPath; }
-    public String getConfigBranch()  { return configBranch; }
-    public String getCredentialsId() { return credentialsId; }
+    public String getSourceCodePath() { return sourceCodePath; }
+    public String getConfigRepoUrl()  { return configRepoUrl; }
+    public String getConfigPath()     { return configPath; }
+    public String getConfigBranch()   { return configBranch; }
+    public String getCredentialsId()  { return credentialsId; }
+
+    @DataBoundSetter
+    public void setSourceCodePath(String v) { this.sourceCodePath = v; }
 
     @DataBoundSetter
     public void setConfigRepoUrl(String v) { this.configRepoUrl = v; }
@@ -105,6 +110,9 @@ public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> imple
 
         this.pipelineScript = "@Library('jenkins-json-pipeline') _\n\n"
                 + "jsonPipeline {\n"
+                + (sourceCodePath != null && !sourceCodePath.isEmpty()
+                        ? "    sourceCodePath = '" + escape(sourceCodePath) + "'\n"
+                        : "")
                 + "    configRepo = '" + escape(configRepoUrl) + "'\n"
                 + "    configPath = '" + escape(configPath) + "'\n"
                 + (configBranch != null && !configBranch.isEmpty()
