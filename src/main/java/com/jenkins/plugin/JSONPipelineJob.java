@@ -141,7 +141,7 @@ public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> imple
 
         @Override
         public String getDisplayName() {
-            return "JSON Pipeline";
+            return "rick-json-pipeline";
         }
 
         @Override
