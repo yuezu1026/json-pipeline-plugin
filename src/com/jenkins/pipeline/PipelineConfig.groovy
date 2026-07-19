@@ -17,6 +17,14 @@ class PipelineConfig implements Serializable {
     List<TriggerConfig> triggers = []
     OptionsConfig options
 
+    // ============ 预定义参数 Schema（Part B） ============
+    List<ParameterSchema> schema = []
+
+    // ============ 外部配置仓库（Part A） ============
+    String configRepo        // Git 仓库 URL（存放 JSON 配置文件的独立仓库）
+    String configPath        // JSON 配置文件在仓库中的路径，如 "prod/deploy.json"
+    String configBranch      // 分支，默认 main
+
     /**
      * 从 JSON 字符串解析 PipelineConfig
      */
@@ -55,6 +63,11 @@ class PipelineConfig implements Serializable {
         // 解析 options
         if (pipeline.options) {
             config.options = OptionsConfig.fromJson(pipeline.options)
+        }
+
+        // 解析 schema（预定义参数）
+        pipeline.schema?.each { schemaJson ->
+            config.schema << ParameterSchema.fromJson(schemaJson)
         }
 
         return config

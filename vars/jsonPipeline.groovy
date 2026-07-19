@@ -1,17 +1,54 @@
 /**
  * jsonPipeline - Jenkins 共享库全局变量入口
  *
- * 用法 (在 Jenkinsfile 中):
+ * ============================================================
+ * 用法 1: 闭包指定配置
+ * ============================================================
  *   @Library('jenkins-json-pipeline') _
+ *
+ *   // A. 从外部 Git 仓库加载 JSON 配置（推荐）
  *   jsonPipeline {
- *       configFile = 'pipeline.json'  // 或 configJson = '...'
+ *       configRepo   = 'https://github.com/myorg/pipeline-config.git'
+ *       configPath   = 'prod/deploy.json'
+ *       configBranch = 'main'   // 可选，默认 main
  *   }
  *
- * 也支持在 Jenkinsfile 中直接传入 JSON:
- *   jsonPipeline('''{ "pipeline": { ... } }''')
+ *   // B. 从本地文件加载
+ *   jsonPipeline {
+ *       configFile = 'pipeline.json'
+ *   }
  *
- * 或者传入 JSON 文件路径:
- *   jsonPipeline('config/pipeline.json')
+ *   // C. 直接写 JSON
+ *   jsonPipeline {
+ *       configJson = '{"pipeline": {"name": "test", "stages": [...]}}'
+ *   }
+ *
+ * ============================================================
+ * 用法 2: 直接传参
+ * ============================================================
+ *   jsonPipeline('config/pipeline.json')                     // 本地文件
+ *   jsonPipeline('{"pipeline": {...}}')                       // JSON 字符串
+ *
+ * ============================================================
+ * 高级功能: 预定义参数 Schema
+ * ============================================================
+ *  在 JSON 配置中定义 "schema" 字段，jenkins 在构建时自动生成参数表单:
+ *
+ *  {
+ *    "pipeline": {
+ *      "name": "部署流水线",
+ *      "schema": [
+ *        {"name": "BRANCH", "type": "string",  "label": "分支",     "required": true,  "defaultValue": "main"},
+ *        {"name": "ENV",    "type": "choice",  "label": "目标环境", "required": true,  "options": [
+ *          {"value": "dev", "label": "开发环境"},
+ *          {"value": "stg", "label": "预发布"},
+ *          {"value": "prd", "label": "生产环境"}
+ *        ]},
+ *        {"name": "DRY_RUN","type": "boolean", "label": "仅预览",   "required": false, "defaultValue": false}
+ *      ],
+ *      "stages": [...]
+ *    }
+ *   }
  */
 
 import com.jenkins.pipeline.PipelineConfig
@@ -28,27 +65,32 @@ def call(Closure body) {
 
     PipelineConfig pipelineConfig
 
-    if (config.configJson) {
-        // 从 JSON 字符串解析
+    // ---- 优先级: configRepo > configFile > configJson > configMap ----
+    if (config.configRepo && config.configPath) {
+        // ========== 从外部 Git 仓库加载 JSON 配置 (Part A) ==========
+        echo "[jsonPipeline] 从外部仓库加载配置: ${config.configRepo} → ${config.configPath}"
+        checkout([
+            $class: 'GitSCM',
+            branches: [[name: config.configBranch ?: 'main']],
+            userRemoteConfigs: [[url: config.configRepo]]
+        ])
+        pipelineConfig = PipelineConfig.fromFile(config.configPath)
+
+    } else if (config.configJson) {
         pipelineConfig = PipelineConfig.fromJson(config.configJson)
+
     } else if (config.configFile) {
-        // 从 JSON 文件解析
         pipelineConfig = PipelineConfig.fromFile(config.configFile)
+
     } else if (config.configMap) {
-        // 从 Map 直接构建（用于 Groovy 代码中构建配置）
         pipelineConfig = PipelineConfig.fromJson(groovy.json.JsonOutput.toJson(config.configMap))
+
     } else {
-        error('jsonPipeline: 需要提供 configJson、configFile 或 configMap 参数')
+        error('jsonPipeline: 需要提供 configRepo+configPath、configJson、configFile 或 configMap 参数')
     }
 
-    // 参数化构建
-    if (pipelineConfig.parameters) {
-        properties([
-            parameters(pipelineConfig.parameters.collect { param ->
-                buildParameter(param)
-            })
-        ])
-    }
+    // ---- 参数化构建 ----
+    applyParameters(pipelineConfig)
 
     def builder = new JsonPipelineBuilder(this)
     builder.build(pipelineConfig)
@@ -61,15 +103,39 @@ def call(String jsonOrPath) {
     def pipelineConfig
 
     if (jsonOrPath.contains('{') && jsonOrPath.contains('}')) {
-        // 看起来是 JSON 字符串
         pipelineConfig = PipelineConfig.fromJson(jsonOrPath)
     } else {
-        // 当作文件路径
         pipelineConfig = PipelineConfig.fromFile(jsonOrPath)
     }
 
+    applyParameters(pipelineConfig)
+
     def builder = new JsonPipelineBuilder(this)
     builder.build(pipelineConfig)
+}
+
+/**
+ * 应用参数定义: schema (预定义) 优先，否则使用 JSON 中的 parameters
+ */
+private void applyParameters(PipelineConfig pipelineConfig) {
+    def paramDefs = []
+
+    if (pipelineConfig.schema) {
+        // ========== 使用 Schema 生成参数表单 (Part B) ==========
+        echo "[jsonPipeline] 应用预定义参数 Schema: ${pipelineConfig.schema.size()} 个参数"
+        paramDefs = pipelineConfig.schema.collect { schema ->
+            buildParameter(schema.toParameterConfig())
+        }
+    } else if (pipelineConfig.parameters) {
+        // ========== 使用 JSON 中定义的 parameters ==========
+        paramDefs = pipelineConfig.parameters.collect { param ->
+            buildParameter(param)
+        }
+    }
+
+    if (paramDefs) {
+        properties([parameters(paramDefs)])
+    }
 }
 
 /**
@@ -82,6 +148,7 @@ private def buildParameter(com.jenkins.pipeline.ParameterConfig param) {
         case 'text':
             return text(name: param.name, defaultValue: param.defaultValue?.toString() ?: '', description: param.description)
         case 'booleanParam':
+        case 'boolean':
             return booleanParam(name: param.name, defaultValue: param.defaultValue ?: false, description: param.description)
         case 'choice':
             return choice(name: param.name, choices: param.choices as String[], description: param.description)
