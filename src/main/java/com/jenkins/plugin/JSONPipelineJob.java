@@ -1,8 +1,11 @@
 package com.jenkins.plugin;
 
 import hudson.Extension;
+import hudson.init.InitMilestone;
+import hudson.init.Initializer;
 import hudson.model.Descriptor;
 import hudson.model.ItemGroup;
+import hudson.model.Items;
 import hudson.model.Job;
 import hudson.model.TopLevelItem;
 import hudson.model.TopLevelItemDescriptor;
@@ -130,9 +133,36 @@ public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> imple
         return pipelineScript;
     }
 
+    // ============================================================
+    // Build 支持 —— 提供 /build 端点
+    // ============================================================
+
+    /**
+     * 响应 "立即构建" 请求。
+     */
+    public void doBuild(StaplerRequest2 req, StaplerResponse2 rsp,
+            @QueryParameter int delay) throws IOException, ServletException {
+        scheduleBuild(delay);
+        rsp.sendRedirect2(req.getContextPath() + "/");
+    }
+
+    @Override
+    protected JSONPipelineRun newBuild() throws IOException {
+        return new JSONPipelineRun(this);
+    }
+
     @Override
     protected void submit(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException, Descriptor.FormException {
         super.submit(req, rsp);
+        // 从请求参数中手动读取表单数据
+        this.sourceCodePath = req.getParameter("_.sourceCodePath");
+        this.configRepoUrl = req.getParameter("_.configRepoUrl");
+        this.configPath = req.getParameter("_.configPath");
+        this.configBranch = req.getParameter("_.configBranch");
+        this.credentialsId = req.getParameter("_.credentialsId");
+        if (this.configBranch == null || this.configBranch.isEmpty()) {
+            this.configBranch = "main";
+        }
         regenerateDefinition();
     }
 
@@ -146,6 +176,18 @@ public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> imple
     // ============================================================
     @Extension
     public static final class DescriptorImpl extends TopLevelItemDescriptor {
+
+        static {
+            // 注册到 XStream 白名单，避免序列化安全异常
+            Jenkins.XSTREAM2.addCompatibilityAlias("com.jenkins.plugin.JSONPipelineJob", JSONPipelineJob.class);
+            Items.XSTREAM2.addCompatibilityAlias("com.jenkins.plugin.JSONPipelineJob", JSONPipelineJob.class);
+        }
+
+        @Initializer(after = InitMilestone.PLUGINS_STARTED)
+        public static void registerXStreamAliases() {
+            Jenkins.XSTREAM2.addCompatibilityAlias("com.jenkins.plugin.JSONPipelineJob", JSONPipelineJob.class);
+            Items.XSTREAM2.addCompatibilityAlias("com.jenkins.plugin.JSONPipelineJob", JSONPipelineJob.class);
+        }
 
         @Override
         public String getDisplayName() {
