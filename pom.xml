@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
@@ -21,9 +21,8 @@
     <url>https://github.com/yuezu1026/jenkins-json-pipeline</url>
 
     <properties>
-        <!-- Jenkins 版本：编译目标 2.479.1（兼容 2.573 运行） -->
-        <jenkins.version>2.479.1</jenkins.version>
-        <java.level>11</java.level>
+        <jenkins.version>2.479.3</jenkins.version>
+        <java.level>17</java.level>
     </properties>
 
     <licenses>
@@ -33,31 +32,22 @@
         </license>
     </licenses>
 
-    <dependencyManagement>
-        <dependencies>
-            <!-- 直接管理插件依赖版本（绕过 BOM，只保留源码真正使用的依赖） -->
-            <dependency>
-                <groupId>org.jenkins-ci.plugins</groupId>
-                <artifactId>workflow-job</artifactId>
-                <version>1497.v4e339d_8e7d77</version>
-            </dependency>
-            <dependency>
-                <groupId>org.jenkins-ci.plugins</groupId>
-                <artifactId>workflow-cps</artifactId>
-                <version>4013.v63b_60b_8354b_6</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
-        <!-- Pipeline（源码只用了 WorkflowJob + CpsFlowDefinition） -->
         <dependency>
-            <groupId>org.jenkins-ci.plugins</groupId>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-job</artifactId>
+            <version>1540.v295eccc9778f</version>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins</groupId>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
+            <version>4165.vf547819734da_</version>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>5.0.0</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -80,6 +70,14 @@
             <plugin>
                 <groupId>org.jenkins-ci.tools</groupId>
                 <artifactId>maven-hpi-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>6</source>
+                    <target>6</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>

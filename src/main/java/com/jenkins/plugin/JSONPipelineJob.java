@@ -1,18 +1,20 @@
 package com.jenkins.plugin;
 
 import hudson.Extension;
+import hudson.model.Descriptor;
 import hudson.model.ItemGroup;
+import hudson.model.Job;
 import hudson.model.TopLevelItem;
+import hudson.model.TopLevelItemDescriptor;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
-import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.util.logging.Logger;
 
@@ -29,7 +31,7 @@ import java.util.logging.Logger;
  *   @Library('jenkins-json-pipeline') _
  *   jsonPipeline { configRepo = '...'; configPath = '...' }
  */
-public class JSONPipelineJob extends WorkflowJob implements TopLevelItem {
+public class JSONPipelineJob extends Job<JSONPipelineJob, JSONPipelineRun> implements TopLevelItem {
 
     private static final Logger LOGGER = Logger.getLogger(JSONPipelineJob.class.getName());
 
@@ -37,10 +39,16 @@ public class JSONPipelineJob extends WorkflowJob implements TopLevelItem {
     private String configPath = "";
     private String configBranch = "main";
     private String credentialsId = "";
+    private String pipelineScript;
 
     @DataBoundConstructor
     public JSONPipelineJob(ItemGroup parent, String name) {
         super(parent, name);
+    }
+
+    @Override
+    public DescriptorImpl getDescriptor() {
+        return (DescriptorImpl) Jenkins.get().getDescriptorOrDie(getClass());
     }
 
     public String getConfigRepoUrl() { return configRepoUrl; }
@@ -62,6 +70,29 @@ public class JSONPipelineJob extends WorkflowJob implements TopLevelItem {
     @DataBoundSetter
     public void setCredentialsId(String v) { this.credentialsId = v; }
 
+    @Override
+    public boolean isBuildable() {
+        return true;
+    }
+
+    @Override
+    protected java.util.SortedMap<Integer, JSONPipelineRun> _getRuns() {
+        return _allRuns();
+    }
+
+    @Override
+    protected void removeRun(JSONPipelineRun run) {
+        _allRuns().remove(run.getNumber());
+    }
+
+    private synchronized java.util.SortedMap<Integer, JSONPipelineRun> _allRuns() {
+        if (runs == null) {
+            runs = new java.util.TreeMap<>();
+        }
+        return runs;
+    }
+    private transient java.util.SortedMap<Integer, JSONPipelineRun> runs;
+
     /**
      * 自动生成 Pipeline 脚本
      */
@@ -72,7 +103,7 @@ public class JSONPipelineJob extends WorkflowJob implements TopLevelItem {
             return;
         }
 
-        String script = "@Library('jenkins-json-pipeline') _\n\n"
+        this.pipelineScript = "@Library('jenkins-json-pipeline') _\n\n"
                 + "jsonPipeline {\n"
                 + "    configRepo = '" + escape(configRepoUrl) + "'\n"
                 + "    configPath = '" + escape(configPath) + "'\n"
@@ -81,17 +112,19 @@ public class JSONPipelineJob extends WorkflowJob implements TopLevelItem {
                         : "")
                 + "}\n";
 
-        try {
-            this.setDefinition(new CpsFlowDefinition(script, true));
-            LOGGER.info("JSONPipelineJob [" + getName() + "]: Pipeline 定义已生成");
-        } catch (IOException e) {
-            LOGGER.severe("JSONPipelineJob [" + getName() + "]: 生成失败 - " + e.getMessage());
+        LOGGER.info("JSONPipelineJob [" + getName() + "]: Pipeline 定义已生成");
+    }
+
+    public String getPipelineScript() {
+        if (pipelineScript == null) {
+            regenerateDefinition();
         }
+        return pipelineScript;
     }
 
     @Override
-    protected void submit(StaplerRequest req) throws IOException, ServletException, Descriptor.FormException {
-        super.submit(req);
+    protected void submit(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException, Descriptor.FormException {
+        super.submit(req, rsp);
         regenerateDefinition();
     }
 
@@ -122,7 +155,7 @@ public class JSONPipelineJob extends WorkflowJob implements TopLevelItem {
         }
 
         @Override
-        public boolean isApplicable(ItemGroup parent) {
+        public boolean isApplicableIn(ItemGroup parent) {
             return parent instanceof Jenkins;
         }
 
